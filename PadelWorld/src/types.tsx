@@ -1,10 +1,12 @@
 interface Club {
+    id: number;
     name: string;
     url: string;
     place: string;
 }
 
 interface Match {
+    id: number;
     club: Club;
     name:string;
     date: string;

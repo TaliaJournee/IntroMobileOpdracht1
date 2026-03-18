@@ -1,5 +1,6 @@
-import {Club} from "@/types";
-import { View, Image, Text, StyleSheet } from "react-native";
+import { Club } from "@/types";
+import { Link } from "expo-router";
+import { View, Image, Text, StyleSheet, Pressable } from "react-native";
 
 
 type Props = {
@@ -8,9 +9,13 @@ type Props = {
 const ClubCard = ({club}: Props) => {
     return (
         <View style={styles.card}>
-            <Image source={{uri: club.url}} style={styles.img} />
-            <Text style={styles.clubName}>{club.name}</Text>
-            <Text style={styles.clubPlace}>{club.place}</Text>
+            <Link href={{pathname: "/clubPage/[idString]", params: {idString: club.id.toString()}}} asChild >
+                <Pressable>
+                    <Image source={{uri: club.url}} style={styles.img} />
+                    <Text style={styles.clubName}>{club.name}</Text>
+                    <Text style={styles.clubPlace}>{club.place}</Text>
+                </Pressable>
+            </Link>
         </View>
     );
 }
