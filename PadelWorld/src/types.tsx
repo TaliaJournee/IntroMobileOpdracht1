@@ -4,4 +4,14 @@ interface Club {
     place: string;
 }
 
-export default Club;
+interface Match {
+    club: Club;
+    name:string;
+    date: string;
+    time: string;
+    openSlots: number;
+    totalSlots: number;
+    genders: string;
+}
+
+export {Club, Match};

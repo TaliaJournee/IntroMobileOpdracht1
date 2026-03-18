@@ -10,6 +10,10 @@ export default function StackLayout() {
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <Stack>
         <Stack.Screen name='index' options={{title: "Home"}}></Stack.Screen>
+        <Stack.Screen name='bookACourt' options={{title: "Search"}}></Stack.Screen>
+        <Stack.Screen name='learn' options={{title: "Classes"}}></Stack.Screen>
+        <Stack.Screen name='compete' options={{title: "Competitions"}}></Stack.Screen>
+        <Stack.Screen name='findAMatch' options={{title: "Matches"}}></Stack.Screen>
       </Stack>
     </ThemeProvider>
   );
