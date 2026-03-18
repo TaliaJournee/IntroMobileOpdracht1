@@ -114,9 +114,6 @@ const Index = () => {
 />
       </View>
       <View style={styles.block}>
-        <Text style={styles.title}>Suggested for you</Text>
-      </View>
-      <View style={styles.block}>
         <Text style={styles.title}>Compete with others</Text>
         <FlatList
           data={matches}

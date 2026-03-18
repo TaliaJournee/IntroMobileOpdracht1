@@ -14,6 +14,8 @@ export default function StackLayout() {
         <Stack.Screen name='learn' options={{title: "Classes"}}></Stack.Screen>
         <Stack.Screen name='compete' options={{title: "Competitions"}}></Stack.Screen>
         <Stack.Screen name='findAMatch' options={{title: "Matches"}}></Stack.Screen>
+        <Stack.Screen name='matchPage/[idString]' options={{title: "Match"}}></Stack.Screen>
+        <Stack.Screen name='clubPage/[idString]' options={{title: "Club"}}></Stack.Screen>
       </Stack>
     </ThemeProvider>
   );
