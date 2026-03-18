@@ -1,9 +1,9 @@
 import { Text } from "react-native";
 
-const bookACourt = () => {
+const BookACourt = () => {
     return (
         <Text>test</Text>
     );
 }
 
-export default bookACourt;
+export default BookACourt;

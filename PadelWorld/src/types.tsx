@@ -1,17 +1,17 @@
 interface Club {
-    id: number;
+    id: string;
     name: string;
     url: string;
     place: string;
+    address: string;
 }
 
 interface Match {
-    id: number;
+    id: string;
     club: Club;
     name:string;
     date: string;
-    time: string;
-    openSlots: number;
+    takenSlots: number;
     totalSlots: number;
     genders: string;
 }

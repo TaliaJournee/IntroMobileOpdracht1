@@ -1,33 +1,76 @@
 import {Club, Match} from "@/types";
 import { Link } from "expo-router";
-import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { Image, Pressable, StyleSheet, Text, View, ScrollView, FlatList } from "react-native";
 import ClubCard from "./clubCard";
 import MatchCard from "./matchCard";
-import { beginAsyncEvent } from "react-native/Libraries/Performance/Systrace";
-
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "../../firebaseConfig";
+import { useEffect, useState } from "react";
+import dayjs from "dayjs";
 
 const Index = () => {
+  const [clubs, setClubs] = useState<Club[]>([])
+  const [matches, setMatches] = useState<Match[]>([]);
 
-  const testClubs: Club[] = [
-    {
-      id: 1,
-      name : "GARRINCHA Antwerpen Noord",
-      place: "Antwerpen",
-      url: "https://res.cloudinary.com/playtomic/image/upload/v1661178417/pro/tenants/961beb4f-b8d9-421d-b825-b01fe7effda1/1661178416632.jpg"
+  async function getClubs(): Promise<Club[]> {
+  const querySnapshot = await getDocs(collection(db, "tbl_clubs"));
+
+  return querySnapshot.docs.map((doc) => {
+    const data = doc.data();
+
+    return {
+      id: doc.id,
+      name: data.name ?? "",
+      place: data.place ?? "",
+      address: data.address ?? "",
+      url: data.url ?? "",
+    };
+  });
+  }
+  useEffect(() => {
+    const loadClubs = async () => {
+        try {
+          const data = await getClubs();
+          console.log("Clubs: ", data);
+          setClubs(data);
+        }
+        catch(error) {
+          console.error("Error loading clubs: ", error);
+        }
     }
-  ]
-  const testMatches: Match[] = [
-    {
-      id: 1,
-      name : "TestMatch",
-      club : testClubs[0],
-      date : "18-03-2026",
-      time : "17:00",
-      openSlots : 3,
-      totalSlots : 4,
-      genders : "Open"
+    loadClubs()
+  }, []);
+
+    async function getMatches(): Promise<Match[]> {
+  const querySnapshot = await getDocs(collection(db, "tbl_matches"));
+
+  return querySnapshot.docs.map((doc) => {
+    const data = doc.data();
+
+    return {
+      id: doc.id,
+      club: data.club ?? null,
+      genders: data.genders ?? "",
+      name: data.name ?? "",
+      takenSlots: data.takenSlots ?? 0,
+      totalSlots: data.totalSlots ?? 0,
+      date: dayjs(data.date.toDate()).format("DD/MM/YYYY HH:mm") ?? ""
+    };
+  });
+  }
+  useEffect(() => {
+    const loadMatches = async () => {
+        try {
+          const data = await getMatches();
+          console.log("Matches: ", data);
+          setMatches(data);
+        }
+        catch(error) {
+          console.error("Error loading matches: ", error);
+        }
     }
-  ]
+    loadMatches()
+  }, []);
 
   return (
     <View style={styles.container}>
@@ -62,14 +105,26 @@ const Index = () => {
           </View>
       <View style={styles.block}>
         <Text style={styles.title}>Suggested clubs for you</Text>
-        <ClubCard club={testClubs[0]} />
+        <FlatList
+          data={clubs}
+          keyExtractor={(item) => item.id}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          renderItem={({ item }) => <ClubCard club={item} />}
+/>
       </View>
       <View style={styles.block}>
         <Text style={styles.title}>Suggested for you</Text>
       </View>
       <View style={styles.block}>
         <Text style={styles.title}>Compete with others</Text>
-        <MatchCard match={testMatches[0]} />
+        <FlatList
+          data={matches}
+          keyExtractor={(item) => item.id}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          renderItem={({ item }) => <MatchCard match={item} />}
+        />
       </View>
     </View>
   )

@@ -7,6 +7,7 @@ type Props = {
     club: Club
 }
 const ClubCard = ({club}: Props) => {
+    if(!club) return null;
     return (
         <View style={styles.card}>
             <Link href={{pathname: "/clubPage/[idString]", params: {idString: club.id.toString()}}} asChild >
@@ -24,8 +25,9 @@ const styles = StyleSheet.create ({
     card: {
         borderRadius: 12,
         overflow: "hidden",
-        width: "auto",
-        backgroundColor: "lightgrey"
+        width: 340,
+        backgroundColor: "lightgrey",
+        marginRight: 8
     },
     img: {
         width: "100%",
