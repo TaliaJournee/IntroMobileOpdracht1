@@ -391,6 +391,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingBottom: 24,
+    gap: 16
   },
   emptyBox: {
     marginTop: 40,
