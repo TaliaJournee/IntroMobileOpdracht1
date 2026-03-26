@@ -4,6 +4,7 @@ interface Club {
     url: string;
     place: string;
     address: string;
+    province: string;
 }
 
 interface Match {

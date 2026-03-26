@@ -7,7 +7,6 @@ import { useColorScheme } from 'react-native';
 export default function StackLayout() {
   const colorScheme = useColorScheme();
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <Stack>
         <Stack.Screen name='index' options={{title: "Home"}}></Stack.Screen>
         <Stack.Screen name='bookACourt' options={{title: "Search"}}></Stack.Screen>
@@ -17,6 +16,5 @@ export default function StackLayout() {
         <Stack.Screen name='matchPage/[idString]' options={{title: "Match"}}></Stack.Screen>
         <Stack.Screen name='clubPage/[idString]' options={{title: "Club"}}></Stack.Screen>
       </Stack>
-    </ThemeProvider>
   );
 }
