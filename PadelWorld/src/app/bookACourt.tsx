@@ -12,6 +12,7 @@ import {
 import { db } from "../../firebaseConfig";
 import { Club, Match } from "@/types";
 import ClubCard from "./clubCard";
+import React from "react";
 
 const BookACourt = () => {
   const [clubs, setClubs] = useState<Club[]>([]);
@@ -227,22 +228,21 @@ const BookACourt = () => {
           </Pressable>
         </View>
       )}
-      <View style={styles.center}>
-        <FlatList
-          contentContainerStyle={styles.listContent}
-          data={filteredClubs}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => <ClubCard club={item} />}
-          ListEmptyComponent={
-            <View style={styles.emptyBox}>
-              <Text style={styles.emptyTitle}>No clubs found</Text>
-              <Text style={styles.emptyText}>
-                Try another search or province.
-              </Text>
-            </View>
-          }
-        />
-      </View>
+
+      <FlatList
+        style={styles.list}
+        contentContainerStyle={styles.listContent}
+        data={filteredClubs}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => <ClubCard club={item} />}
+        showsVerticalScrollIndicator={false}
+        ListEmptyComponent={
+          <View style={styles.emptyBox}>
+            <Text style={styles.emptyTitle}>No clubs found</Text>
+            <Text style={styles.emptyText}>Try another search or province.</Text>
+          </View>
+        }
+      />
     </View>
   );
 };
@@ -389,9 +389,15 @@ const styles = StyleSheet.create({
     color: "#4338CA",
     fontWeight: "700",
   },
+  list: {
+    flex: 1,
+    width: "100%",
+  },
   listContent: {
     paddingBottom: 24,
-    gap: 16
+    gap: 16,
+    width: "100%",
+    alignItems: "center",
   },
   emptyBox: {
     marginTop: 40,
@@ -409,7 +415,4 @@ const styles = StyleSheet.create({
     color: "#6B7280",
     textAlign: "center",
   },
-  center: {
-    alignItems: "center"
-  }
 });
