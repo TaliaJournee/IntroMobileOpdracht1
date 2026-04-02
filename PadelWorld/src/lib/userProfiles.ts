@@ -7,7 +7,7 @@ export const USER_COLLECTION = "tbl_user";
 export const SKILL_MIN = 0.5;
 export const SKILL_MAX = 7.0;
 export const SKILL_STEP = 0.5;
-export const DEFAULT_SKILL_LEVEL = 3.0;
+export const DEFAULT_SKILL_LEVEL = 1.5;
 
 export function clampSkillLevel(value: number) {
   const rounded = Math.round(value * 2) / 2;
@@ -67,19 +67,4 @@ export async function getUserProfile(
     uid,
     skillLevel: parseSkillLevel(data.skillLevel),
   };
-}
-
-export async function saveUserSkillLevel(uid: string, skillLevel: number) {
-  const normalizedSkillLevel = clampSkillLevel(skillLevel);
-  const userRef = doc(db, USER_COLLECTION, uid);
-
-  await setDoc(
-    userRef,
-    {
-      skillLevel: normalizedSkillLevel,
-    },
-    { merge: true },
-  );
-
-  return normalizedSkillLevel;
 }

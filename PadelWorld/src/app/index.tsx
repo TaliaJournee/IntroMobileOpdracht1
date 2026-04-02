@@ -1,5 +1,4 @@
 import { Club, Match } from "@/types";
-import dayjs from "dayjs";
 import { Link } from "expo-router";
 import { collection, getDocs } from "firebase/firestore";
 import { useEffect, useState } from "react";
@@ -12,9 +11,11 @@ import {
   StyleSheet,
   ScrollView,
 } from "react-native";
-import MatchCard from "./matchCard";
+import MatchCard from "../components/matchCard";
 import { db } from "../../firebaseConfig";
-import ClubCard from "./clubCard";
+import { buildMatchFromDoc, MATCH_COLLECTION } from "@/lib/matches";
+import ClubCard from "../components/clubCard";
+import React from "react";
 
 const Index = () => {
   const [clubs, setClubs] = useState<Club[]>([]);
@@ -46,25 +47,16 @@ const Index = () => {
         console.error("Error loading clubs: ", error);
       }
     };
+
     loadClubs();
   }, []);
 
   async function getMatches(): Promise<Match[]> {
-    const querySnapshot = await getDocs(collection(db, "tbl_matches"));
+    const querySnapshot = await getDocs(collection(db, MATCH_COLLECTION));
 
-    return querySnapshot.docs.map((doc) => {
-      const data = doc.data();
-
-      return {
-        id: doc.id,
-        club: data.club ?? null,
-        genders: data.genders ?? "",
-        name: data.name ?? "",
-        takenSlots: data.takenSlots ?? 0,
-        totalSlots: data.totalSlots ?? 0,
-        date: data.date ? dayjs(data.date.toDate()).format("DD/MM/YYYY HH:mm") : "",
-      };
-    });
+    return querySnapshot.docs.map((doc) =>
+      buildMatchFromDoc(doc.id, doc.data() as Record<string, unknown>),
+    );
   }
 
   useEffect(() => {
@@ -76,6 +68,7 @@ const Index = () => {
         console.error("Error loading matches: ", error);
       }
     };
+
     loadMatches();
   }, []);
 

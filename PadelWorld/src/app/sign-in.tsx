@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { View, Text, Pressable, StyleSheet, ScrollView } from "react-native";
 import { signInWithGoogle } from "@/lib/googleAuth";
+import React from "react";
 
-export default function SignInScreen() {
+const SignInScreen = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -76,3 +77,5 @@ const styles = StyleSheet.create({
     color: "red",
   },
 });
+
+export default SignInScreen;

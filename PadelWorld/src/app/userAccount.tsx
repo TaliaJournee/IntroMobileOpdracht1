@@ -1,7 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,23 +9,16 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import {
   DEFAULT_SKILL_LEVEL,
-  SKILL_MAX,
-  SKILL_MIN,
-  SKILL_STEP,
-  clampSkillLevel,
   ensureUserProfile,
   formatSkillLevel,
-  saveUserSkillLevel,
 } from "@/lib/userProfiles";
 
-export default function UserAccountPage() {
+const UserAccountPage = () => {
   const { user } = useAuth();
 
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [skillLevel, setSkillLevel] = useState(DEFAULT_SKILL_LEVEL);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
 
   const displayName = useMemo(() => {
     if (!user) return "Unknown user";
@@ -50,7 +42,7 @@ export default function UserAccountPage() {
         setError(
           err instanceof Error
             ? err.message
-            : "Failed to load your account."
+            : "Failed to load your account.",
         );
       } finally {
         setLoading(false);
@@ -59,43 +51,6 @@ export default function UserAccountPage() {
 
     loadProfile();
   }, [user]);
-
-  const decreaseSkill = () => {
-    setSuccess("");
-    setError("");
-    setSkillLevel((current) => clampSkillLevel(current - SKILL_STEP));
-  };
-
-  const increaseSkill = () => {
-    setSuccess("");
-    setError("");
-    setSkillLevel((current) => clampSkillLevel(current + SKILL_STEP));
-  };
-
-  const handleSave = async () => {
-    if (!user) {
-      setError("You need to be signed in.");
-      return;
-    }
-
-    try {
-      setSaving(true);
-      setError("");
-      setSuccess("");
-
-      const savedLevel = await saveUserSkillLevel(user.uid, skillLevel);
-      setSkillLevel(savedLevel);
-      setSuccess("Your skill level has been saved.");
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Failed to save your skill level."
-      );
-    } finally {
-      setSaving(false);
-    }
-  };
 
   if (loading) {
     return (
@@ -127,59 +82,17 @@ export default function UserAccountPage() {
 
         <View style={styles.infoBlock}>
           <Text style={styles.label}>Skill level</Text>
-          <Text style={styles.helper}>
-            Set your level from 0.5 to 7.0 in steps of 0.5.
-          </Text>
-
-          <View style={styles.skillRow}>
-            <Pressable
-              onPress={decreaseSkill}
-              disabled={skillLevel <= SKILL_MIN}
-              style={({ pressed }) => [
-                styles.stepButton,
-                skillLevel <= SKILL_MIN && styles.stepButtonDisabled,
-                pressed && skillLevel > SKILL_MIN && styles.stepButtonPressed,
-              ]}
-            >
-              <Text style={styles.stepButtonText}>−</Text>
-            </Pressable>
-
-            <View style={styles.skillPill}>
-              <Text style={styles.skillValue}>
-                {formatSkillLevel(skillLevel)}
-              </Text>
-            </View>
-
-            <Pressable
-              onPress={increaseSkill}
-              disabled={skillLevel >= SKILL_MAX}
-              style={({ pressed }) => [
-                styles.stepButton,
-                skillLevel >= SKILL_MAX && styles.stepButtonDisabled,
-                pressed && skillLevel < SKILL_MAX && styles.stepButtonPressed,
-              ]}
-            >
-              <Text style={styles.stepButtonText}>+</Text>
-            </Pressable>
+          <View style={styles.skillPill}>
+            <Text style={styles.skillValue}>{formatSkillLevel(skillLevel)}</Text>
           </View>
+          <Text style={styles.helper}>
+            New players start at 1.5. Your level now changes automatically
+            through competitive match results, so it can no longer be edited
+            here.
+          </Text>
         </View>
 
         {!!error && <Text style={styles.errorText}>{error}</Text>}
-        {!!success && <Text style={styles.successText}>{success}</Text>}
-
-        <Pressable
-          onPress={handleSave}
-          disabled={saving}
-          style={({ pressed }) => [
-            styles.saveButton,
-            pressed && styles.saveButtonPressed,
-            saving && styles.saveButtonDisabled,
-          ]}
-        >
-          <Text style={styles.saveButtonText}>
-            {saving ? "Saving..." : "Save skill level"}
-          </Text>
-        </Pressable>
       </View>
     </ScrollView>
   );
@@ -229,83 +142,36 @@ const styles = StyleSheet.create({
     color: "#7C8493",
     textTransform: "uppercase",
     letterSpacing: 0.8,
-    marginBottom: 4,
+    marginBottom: 8,
   },
   value: {
     fontSize: 16,
     color: "#1F2A44",
     fontWeight: "500",
   },
+  skillPill: {
+    alignSelf: "flex-start",
+    backgroundColor: "#EEF2FF",
+    borderRadius: 999,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    marginBottom: 12,
+  },
+  skillValue: {
+    color: "#1D4ED8",
+    fontSize: 22,
+    fontWeight: "700",
+  },
   helper: {
     fontSize: 14,
     color: "#6B7280",
-    marginTop: 4,
-    marginBottom: 14,
-  },
-  skillRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  stepButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    backgroundColor: "#111827",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  stepButtonDisabled: {
-    backgroundColor: "#CBD5E1",
-  },
-  stepButtonPressed: {
-    opacity: 0.85,
-  },
-  stepButtonText: {
-    color: "#FFFFFF",
-    fontSize: 24,
-    fontWeight: "700",
-    lineHeight: 24,
-  },
-  skillPill: {
-    minWidth: 110,
-    marginHorizontal: 16,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    borderRadius: 14,
-    backgroundColor: "#EEF2FF",
-    alignItems: "center",
-  },
-  skillValue: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: "#4338CA",
+    lineHeight: 20,
   },
   errorText: {
     color: "#DC2626",
-    marginBottom: 12,
     fontWeight: "600",
-  },
-  successText: {
-    color: "#15803D",
-    marginBottom: 12,
-    fontWeight: "600",
-  },
-  saveButton: {
-    backgroundColor: "#111827",
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: "center",
-  },
-  saveButtonPressed: {
-    opacity: 0.85,
-  },
-  saveButtonDisabled: {
-    opacity: 0.6,
-  },
-  saveButtonText: {
-    color: "#FFFFFF",
-    fontWeight: "700",
-    fontSize: 16,
+    marginTop: 8,
   },
 });
+
+export default UserAccountPage;

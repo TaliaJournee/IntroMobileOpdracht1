@@ -11,7 +11,7 @@ import { router } from "expo-router";
 import { useAuth } from "@/context/AuthContext";
 import { signOutWithGoogle } from "@/lib/googleAuth";
 
-export default function AccountMenu() {
+const AccountMenu = () => {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState("");
@@ -211,3 +211,5 @@ const styles = StyleSheet.create({
     textAlign: "right",
   },
 });
+
+export default AccountMenu;

@@ -15,6 +15,7 @@ function AppNavigator() {
 
     if (!user && !onSignInPage) {
       router.replace("/sign-in");
+      return;
     }
 
     if (user && onSignInPage) {

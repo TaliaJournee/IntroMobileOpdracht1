@@ -1,4 +1,4 @@
-import dayjs from "dayjs";
+import { Club } from "@/types";
 import { collection, getDocs } from "firebase/firestore";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -10,13 +10,11 @@ import {
   View,
 } from "react-native";
 import { db } from "../../firebaseConfig";
-import { Club, Match } from "@/types";
-import ClubCard from "./clubCard";
+import ClubCard from "../components/clubCard";
 import React from "react";
 
 const BookACourt = () => {
   const [clubs, setClubs] = useState<Club[]>([]);
-  const [matches, setMatches] = useState<Match[]>([]);
   const [dropdown, setDropdown] = useState(false);
   const [selectedProvince, setSelectedProvince] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -38,26 +36,6 @@ const BookACourt = () => {
     });
   }
 
-  async function getMatches(): Promise<Match[]> {
-    const querySnapshot = await getDocs(collection(db, "tbl_matches"));
-
-    return querySnapshot.docs.map((doc) => {
-      const data = doc.data();
-
-      return {
-        id: doc.id,
-        club: data.club ?? null,
-        genders: data.genders ?? "",
-        name: data.name ?? "",
-        takenSlots: data.takenSlots ?? 0,
-        totalSlots: data.totalSlots ?? 0,
-        date: data.date
-          ? dayjs(data.date.toDate()).format("DD/MM/YYYY HH:mm")
-          : "",
-      };
-    });
-  }
-
   useEffect(() => {
     const loadClubs = async () => {
       try {
@@ -69,19 +47,6 @@ const BookACourt = () => {
     };
 
     loadClubs();
-  }, []);
-
-  useEffect(() => {
-    const loadMatches = async () => {
-      try {
-        const data = await getMatches();
-        setMatches(data);
-      } catch (error) {
-        console.error("Error loading matches: ", error);
-      }
-    };
-
-    loadMatches();
   }, []);
 
   const provinces = useMemo(() => {
@@ -115,7 +80,7 @@ const BookACourt = () => {
       <View style={styles.header}>
         <Text style={styles.title}>Book a Court</Text>
         <Text style={styles.subtitle}>
-          Find a club by province, name, or place
+          Pick a club first, then choose an available slot
         </Text>
       </View>
 
@@ -247,8 +212,6 @@ const BookACourt = () => {
   );
 };
 
-export default BookACourt;
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -284,25 +247,25 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   searchIcon: {
-    fontSize: 16,
+    fontSize: 18,
     color: "#6B7280",
     marginRight: 10,
   },
   searchInput: {
     flex: 1,
     fontSize: 15,
-    color: "#1F2A44",
+    color: "#111827",
   },
   clearSearch: {
-    fontSize: 16,
-    color: "#6B7280",
+    fontSize: 18,
+    color: "#9CA3AF",
     paddingLeft: 10,
   },
   filterButton: {
     backgroundColor: "#FFFFFF",
     borderRadius: 16,
-    paddingVertical: 14,
     paddingHorizontal: 16,
+    paddingVertical: 14,
     marginBottom: 12,
     flexDirection: "row",
     justifyContent: "space-between",
@@ -314,22 +277,22 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   filterButtonPressed: {
-    opacity: 0.9,
+    opacity: 0.92,
   },
   filterLabel: {
     fontSize: 12,
     color: "#7C8493",
-    marginBottom: 2,
     textTransform: "uppercase",
     letterSpacing: 0.8,
+    marginBottom: 4,
   },
   filterValue: {
-    fontSize: 16,
+    fontSize: 15,
+    color: "#111827",
     fontWeight: "600",
-    color: "#1F2A44",
   },
   filterIcon: {
-    fontSize: 14,
+    fontSize: 12,
     color: "#4B5563",
   },
   dropdownCard: {
@@ -344,7 +307,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   dropdownTitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "700",
     color: "#1F2A44",
     marginBottom: 12,
@@ -355,54 +318,52 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   chip: {
-    backgroundColor: "#EEF2FF",
-    paddingVertical: 10,
-    paddingHorizontal: 14,
+    backgroundColor: "#F3F4F6",
     borderRadius: 999,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
   },
   chipSelected: {
-    backgroundColor: "#4F46E5",
+    backgroundColor: "#111827",
   },
   chipText: {
-    color: "#374151",
+    color: "#111827",
     fontWeight: "600",
-    fontSize: 14,
   },
   chipTextSelected: {
     color: "#FFFFFF",
   },
   activeFilterRow: {
+    backgroundColor: "#EEF2FF",
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 12,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 12,
-    backgroundColor: "#EDE9FE",
-    borderRadius: 14,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
   },
   activeFilterText: {
-    color: "#4338CA",
+    color: "#1D4ED8",
+    fontSize: 13,
     fontWeight: "600",
   },
   clearText: {
-    color: "#4338CA",
+    color: "#1D4ED8",
     fontWeight: "700",
   },
   list: {
     flex: 1,
-    width: "100%",
   },
   listContent: {
-    paddingBottom: 24,
-    gap: 16,
-    width: "100%",
-    alignItems: "center",
+    paddingBottom: 28,
   },
   emptyBox: {
-    marginTop: 40,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 18,
+    padding: 24,
     alignItems: "center",
-    paddingHorizontal: 20,
+    marginTop: 8,
   },
   emptyTitle: {
     fontSize: 18,
@@ -416,3 +377,5 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 });
+
+export default BookACourt;
