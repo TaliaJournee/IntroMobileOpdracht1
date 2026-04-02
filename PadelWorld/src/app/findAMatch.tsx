@@ -135,6 +135,9 @@ const FindAMatchPage = () => {
       .filter((match) => {
         const parsedDateTime = dayjs(match.date, "DD/MM/YYYY HH:mm", true);
 
+        const isUpcomingMatch =
+          parsedDateTime.isValid() && parsedDateTime.isAfter(dayjs());
+
         const clubName = match.club?.name?.toLowerCase() ?? "";
         const clubPlace = match.club?.place?.toLowerCase() ?? "";
         const clubAddress = match.club?.address?.toLowerCase() ?? "";
@@ -190,6 +193,7 @@ const FindAMatchPage = () => {
           });
 
         return (
+          isUpcomingMatch &&
           matchesLocation &&
           matchesGender &&
           matchesCompetitive &&
@@ -484,70 +488,40 @@ const FindAMatchPage = () => {
               </View>
 
               <View style={styles.section}>
-                <Text style={styles.dropdownTitle}>Competitive</Text>
+                <Text style={styles.dropdownTitle}>Match type</Text>
 
                 <View style={styles.chipContainer}>
-                  <Pressable
-                    onPress={() => setCompetitiveFilter("all")}
-                    style={[
-                      styles.chip,
-                      competitiveFilter === "all" && styles.chipSelected,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.chipText,
-                        competitiveFilter === "all" && styles.chipTextSelected,
-                      ]}
-                    >
-                      All
-                    </Text>
-                  </Pressable>
+                  {[
+                    { label: "All", value: "all" as const },
+                    { label: "Competitive", value: "competitive" as const },
+                    { label: "Friendly", value: "friendly" as const },
+                  ].map((option) => {
+                    const isSelected = competitiveFilter === option.value;
 
-                  <Pressable
-                    onPress={() => setCompetitiveFilter("competitive")}
-                    style={[
-                      styles.chip,
-                      competitiveFilter === "competitive" &&
-                        styles.chipSelected,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.chipText,
-                        competitiveFilter === "competitive" &&
-                          styles.chipTextSelected,
-                      ]}
-                    >
-                      Competitive
-                    </Text>
-                  </Pressable>
-
-                  <Pressable
-                    onPress={() => setCompetitiveFilter("friendly")}
-                    style={[
-                      styles.chip,
-                      competitiveFilter === "friendly" && styles.chipSelected,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.chipText,
-                        competitiveFilter === "friendly" &&
-                          styles.chipTextSelected,
-                      ]}
-                    >
-                      Friendly
-                    </Text>
-                  </Pressable>
+                    return (
+                      <Pressable
+                        key={option.value}
+                        onPress={() => setCompetitiveFilter(option.value)}
+                        style={[styles.chip, isSelected && styles.chipSelected]}
+                      >
+                        <Text
+                          style={[
+                            styles.chipText,
+                            isSelected && styles.chipTextSelected,
+                          ]}
+                        >
+                          {option.label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
                 </View>
               </View>
 
               <View style={styles.section}>
-                <Text style={styles.dropdownTitle}>Level</Text>
+                <Text style={styles.dropdownTitle}>Competitive level</Text>
                 <Text style={styles.helperText}>
-                  You can select multiple levels. Friendly matches always stay
-                  visible because level does not matter there.
+                  These filters are only applied to competitive matches.
                 </Text>
 
                 <View style={styles.chipContainer}>
@@ -573,7 +547,7 @@ const FindAMatchPage = () => {
 
                     return (
                       <Pressable
-                        key={`level-${level}`}
+                        key={level}
                         onPress={() => toggleLevel(level)}
                         style={[styles.chip, isSelected && styles.chipSelected]}
                       >
@@ -591,81 +565,26 @@ const FindAMatchPage = () => {
                 </View>
               </View>
 
-              <Pressable
-                onPress={clearAllFilters}
-                style={({ pressed }) => [
-                  styles.clearAllButton,
-                  pressed && styles.clearAllButtonPressed,
-                ]}
-              >
-                <Text style={styles.clearAllButtonText}>Clear all filters</Text>
-              </Pressable>
-            </View>
-          )}
-
-          {activeFilterCount > 0 && (
-            <View style={styles.activeFilterRow}>
-              <View style={styles.activeFilterTextBlock}>
-                {locationQuery.trim() !== "" && (
-                  <Text style={styles.activeFilterText}>
-                    Location: {locationQuery}
-                  </Text>
-                )}
-
-                {selectedDate.trim() !== "" && (
-                  <Text style={styles.activeFilterText}>
-                    Date: {selectedDate}
-                  </Text>
-                )}
-
-                {selectedTimes.length > 0 && (
-                  <Text style={styles.activeFilterText}>
-                    Time: {selectedTimes.join(", ")}
-                  </Text>
-                )}
-
-                {selectedGender && (
-                  <Text style={styles.activeFilterText}>
-                    Gender: {selectedGender}
-                  </Text>
-                )}
-
-                {competitiveFilter !== "all" && (
-                  <Text style={styles.activeFilterText}>
-                    Type:{" "}
-                    {competitiveFilter === "competitive"
-                      ? "Competitive"
-                      : "Friendly"}
-                  </Text>
-                )}
-
-                {selectedLevels.length > 0 && (
-                  <Text style={styles.activeFilterText}>
-                    Level:{" "}
-                    {selectedLevels
-                      .map((level) => level.toFixed(1))
-                      .join(", ")}
-                  </Text>
-                )}
+              <View style={styles.actionRow}>
+                <Pressable
+                  onPress={clearAllFilters}
+                  style={({ pressed }) => [
+                    styles.clearButton,
+                    pressed && styles.clearButtonPressed,
+                  ]}
+                >
+                  <Text style={styles.clearButtonText}>Clear all</Text>
+                </Pressable>
               </View>
-
-              <Pressable onPress={clearAllFilters}>
-                <Text style={styles.clearText}>Clear all</Text>
-              </Pressable>
             </View>
           )}
-
-          <Text style={styles.resultsText}>
-            {filteredMatches.length} match
-            {filteredMatches.length === 1 ? "" : "es"} found
-          </Text>
         </View>
       }
       ListEmptyComponent={
-        <View style={styles.emptyBox}>
+        <View style={styles.emptyState}>
           <Text style={styles.emptyTitle}>No matches found</Text>
           <Text style={styles.emptyText}>
-            Try changing one or more filters.
+            Try changing or clearing your filters.
           </Text>
         </View>
       }
@@ -674,136 +593,129 @@ const FindAMatchPage = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    backgroundColor: "#F7F8FC",
-    paddingTop: 24,
-    paddingHorizontal: 16,
-  },
   listContent: {
-    paddingBottom: 28,
+    paddingBottom: 24,
+  },
+  container: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 10,
     backgroundColor: "#F7F8FC",
   },
   headerRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    gap: 12,
-    marginBottom: 18,
+    marginBottom: 16,
   },
   headerTextBlock: {
-    flex: 1,
+    gap: 4,
   },
   title: {
     fontSize: 28,
     fontWeight: "700",
     color: "#1F2A44",
-    marginBottom: 4,
   },
   subtitle: {
-    fontSize: 14,
     color: "#6B7280",
+    fontSize: 14,
+    lineHeight: 20,
   },
   filterButton: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 16,
+    borderRadius: 18,
     paddingHorizontal: 16,
     paddingVertical: 14,
-    marginBottom: 12,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
   },
   filterButtonPressed: {
     opacity: 0.92,
   },
   filterLabel: {
-    fontSize: 12,
-    color: "#7C8493",
+    fontSize: 13,
+    color: "#6B7280",
     textTransform: "uppercase",
-    letterSpacing: 0.8,
-    marginBottom: 4,
+    letterSpacing: 0.6,
+    marginBottom: 2,
   },
   filterValue: {
+    color: "#1F2A44",
     fontSize: 15,
-    color: "#111827",
     fontWeight: "600",
   },
   filterIcon: {
-    fontSize: 12,
-    color: "#4B5563",
+    fontSize: 14,
+    color: "#1F2A44",
   },
   dropdownCard: {
+    marginTop: 14,
     backgroundColor: "#FFFFFF",
-    borderRadius: 18,
+    borderRadius: 20,
     padding: 16,
-    marginBottom: 12,
     shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
   },
   section: {
     marginBottom: 18,
   },
   dropdownTitle: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: "700",
     color: "#1F2A44",
+    marginBottom: 8,
+  },
+  helperText: {
+    color: "#6B7280",
+    fontSize: 13,
+    lineHeight: 18,
     marginBottom: 10,
   },
   input: {
-    backgroundColor: "#F9FAFB",
     borderWidth: 1,
-    borderColor: "#E5E7EB",
-    borderRadius: 14,
+    borderColor: "#D1D5DB",
+    borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    fontSize: 15,
-    color: "#111827",
-  },
-  helperText: {
-    fontSize: 13,
-    color: "#6B7280",
-    marginBottom: 10,
-    lineHeight: 18,
+    color: "#1F2A44",
+    backgroundColor: "#F9FAFB",
   },
   selectButton: {
-    backgroundColor: "#F9FAFB",
     borderWidth: 1,
-    borderColor: "#E5E7EB",
-    borderRadius: 14,
+    borderColor: "#D1D5DB",
+    borderRadius: 12,
     paddingHorizontal: 14,
-    paddingVertical: 14,
+    paddingVertical: 12,
+    backgroundColor: "#F9FAFB",
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "space-between",
-    gap: 12,
+    alignItems: "center",
   },
   selectButtonPressed: {
     opacity: 0.92,
   },
   selectButtonText: {
-    color: "#111827",
-    fontSize: 16,
-    flex: 1,
+    color: "#1F2A44",
+    fontSize: 15,
+    fontWeight: "500",
   },
   selectButtonIcon: {
-    color: "#4B5563",
-    fontSize: 12,
+    color: "#1F2A44",
+    fontSize: 13,
   },
   calendarCard: {
-    marginTop: 10,
-    backgroundColor: "#FFFFFF",
+    marginTop: 12,
     borderWidth: 1,
     borderColor: "#E5E7EB",
     borderRadius: 16,
     padding: 14,
+    backgroundColor: "#F9FAFB",
   },
   calendarHeader: {
     flexDirection: "row",
@@ -812,18 +724,17 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   calendarArrowButton: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: "#F3F4F6",
+    width: 32,
+    height: 32,
+    borderRadius: 999,
+    backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
   },
   calendarArrowText: {
-    color: "#111827",
-    fontSize: 20,
+    fontSize: 18,
+    color: "#1F2A44",
     fontWeight: "700",
-    lineHeight: 22,
   },
   calendarMonthText: {
     fontSize: 16,
@@ -836,47 +747,43 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   weekdayCell: {
-    width: "12.8%",
+    width: "12.5%",
+    minWidth: 38,
     alignItems: "center",
-    marginBottom: 4,
+    marginBottom: 2,
   },
   weekdayText: {
     fontSize: 12,
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#6B7280",
   },
   calendarDayEmpty: {
-    width: "12.8%",
-    aspectRatio: 1,
+    width: "12.5%",
+    minWidth: 38,
+    height: 38,
   },
   calendarDay: {
-    width: "12.8%",
-    aspectRatio: 1,
-    borderRadius: 12,
-    backgroundColor: "#F9FAFB",
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
+    width: "12.5%",
+    minWidth: 38,
+    height: 38,
+    borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: "#FFFFFF",
   },
   calendarDaySelected: {
-    backgroundColor: "#111827",
-    borderColor: "#111827",
+    backgroundColor: "#1D4ED8",
   },
   calendarDayText: {
-    fontSize: 14,
+    color: "#1F2A44",
     fontWeight: "600",
-    color: "#111827",
   },
   calendarDayTextSelected: {
     color: "#FFFFFF",
   },
   clearDateButton: {
-    marginTop: 12,
-    backgroundColor: "#EEF2FF",
-    borderRadius: 12,
-    paddingVertical: 10,
-    alignItems: "center",
+    marginTop: 14,
+    alignSelf: "flex-start",
   },
   clearDateButtonText: {
     color: "#1D4ED8",
@@ -888,72 +795,48 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   chip: {
-    backgroundColor: "#F3F4F6",
     borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+    backgroundColor: "#FFFFFF",
     paddingVertical: 10,
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
   },
   chipSelected: {
-    backgroundColor: "#111827",
+    backgroundColor: "#1D4ED8",
+    borderColor: "#1D4ED8",
   },
   chipText: {
-    color: "#111827",
+    color: "#1F2A44",
     fontWeight: "600",
   },
   chipTextSelected: {
     color: "#FFFFFF",
   },
-  clearAllButton: {
-    backgroundColor: "#EEF2FF",
-    borderRadius: 14,
-    paddingVertical: 12,
-    alignItems: "center",
-    marginTop: 4,
-  },
-  clearAllButtonPressed: {
-    opacity: 0.92,
-  },
-  clearAllButtonText: {
-    color: "#1D4ED8",
-    fontWeight: "700",
-  },
-  activeFilterRow: {
-    backgroundColor: "#EEF2FF",
-    borderRadius: 16,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    marginBottom: 12,
+  actionRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    gap: 12,
+    justifyContent: "flex-end",
   },
-  activeFilterTextBlock: {
-    flex: 1,
+  clearButton: {
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    backgroundColor: "#EEF2FF",
   },
-  activeFilterText: {
-    color: "#1D4ED8",
-    fontSize: 13,
-    fontWeight: "600",
-    marginBottom: 2,
+  clearButtonPressed: {
+    opacity: 0.9,
   },
-  clearText: {
+  clearButtonText: {
     color: "#1D4ED8",
     fontWeight: "700",
   },
-  resultsText: {
-    fontSize: 14,
-    color: "#4B5563",
-    fontWeight: "600",
-    marginBottom: 14,
-  },
-  emptyBox: {
+  emptyState: {
+    marginHorizontal: 16,
+    marginTop: 8,
     backgroundColor: "#FFFFFF",
-    borderRadius: 18,
+    borderRadius: 20,
     padding: 24,
     alignItems: "center",
-    marginTop: 8,
-    marginHorizontal: 16,
   },
   emptyTitle: {
     fontSize: 18,
@@ -962,7 +845,6 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   emptyText: {
-    fontSize: 14,
     color: "#6B7280",
     textAlign: "center",
   },

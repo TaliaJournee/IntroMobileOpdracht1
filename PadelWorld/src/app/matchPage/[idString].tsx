@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState } from "react";
 import { ChatMessage, Match, MatchPlayer, MatchSetScore } from "@/types";
 import { useAuth } from "@/context/AuthContext";
 import {
-  DEFAULT_SKILL_LEVEL,
   USER_COLLECTION,
   clampSkillLevel,
   formatSkillLevel,
@@ -33,7 +32,6 @@ import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import { db } from "../../../firebaseConfig";
 import { buildMatchFromDoc, MATCH_COLLECTION } from "@/lib/matches";
-import { joinMatchAfterPayment } from "@/lib/matchActions";
 import {
   MAX_CHAT_MESSAGE_LENGTH,
   sendMatchChatMessage,
@@ -237,21 +235,14 @@ const MatchPage = () => {
       setJoining(true);
       setError("");
 
-      if (match?.competitive) {
-        router.push({
-          pathname: "/payment",
-          params: {
-            action: "join",
-            matchId: idString,
-          },
-        });
-        return;
-      }
-
-      await joinMatchAfterPayment({
-        matchId: idString,
-        userUid: user.uid,
+      router.push({
+        pathname: "/payment",
+        params: {
+          action: "join",
+          matchId: idString,
+        },
       });
+      return;
     } catch (err) {
       console.error("Error joining match:", err);
 

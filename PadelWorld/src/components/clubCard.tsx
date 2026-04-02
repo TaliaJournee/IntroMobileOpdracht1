@@ -28,7 +28,8 @@ const styles = StyleSheet.create ({
         overflow: "hidden",
         width: 340,
         backgroundColor: "lightgrey",
-        marginRight: 8
+        marginHorizontal: 8,
+        marginBottom: 16
     },
     img: {
         width: "100%",

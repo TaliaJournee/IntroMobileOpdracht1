@@ -2,21 +2,19 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Club } from "@/types";
 import { useAuth } from "@/context/AuthContext";
 import {
-  DEFAULT_SKILL_LEVEL,
   clampSkillLevel,
+  DEFAULT_SKILL_LEVEL,
   formatSkillLevel,
   getUserProfile,
 } from "@/lib/userProfiles";
 import { router, useLocalSearchParams } from "expo-router";
 import {
   Timestamp,
-  addDoc,
   collection,
   doc,
   getDoc,
   getDocs,
   query,
-  serverTimestamp,
   where,
 } from "firebase/firestore";
 import dayjs from "dayjs";
@@ -321,50 +319,19 @@ const ClubPage = () => {
         return;
       }
 
-      if (competitive) {
-        router.push({
-          pathname: "/payment",
-          params: {
-            action: "create",
-            clubId: club.id,
-            date,
-            time,
-            gender,
-            competitiveBand: String(competitiveBand),
-          },
-        });
-        return;
-      }
-
-      const profile = await getUserProfile(user.uid);
-      const playerSkillLevel = profile?.skillLevel ?? DEFAULT_SKILL_LEVEL;
-      const matchName = `${club.name} ${
-        competitive ? "Competitive" : "Friendly"
-      } Match`;
-      const savedLevelMin = competitive ? competitiveLevelMin : null;
-      const savedLevelMax = competitive ? competitiveLevelMax : null;
-
-      const docRef = await addDoc(collection(db, MATCH_COLLECTION), {
-        name: matchName,
-        club: club,
-        clubId: club.id,
-        date: slotStart,
-        genders: gender,
-        level: playerSkillLevel,
-        levelMin: savedLevelMin,
-        levelMax: savedLevelMax,
-        competitive: competitive,
-        players: [{ uid: user.uid, skillLevel: playerSkillLevel }],
-        playerUids: [user.uid],
-        totalSlots: 4,
-        createdByUid: user.uid,
-        createdAt: serverTimestamp(),
+      router.push({
+        pathname: "/payment",
+        params: {
+          action: "create",
+          clubId: club.id,
+          date,
+          time,
+          gender,
+          competitive: String(competitive),
+          competitiveBand: String(competitiveBand),
+        },
       });
-
-      router.replace({
-        pathname: "/matchPage/[idString]",
-        params: { idString: docRef.id },
-      });
+      return;
     } catch (err) {
       console.error("Error creating match:", err);
       setError(

@@ -53,4 +53,5 @@ export interface Match {
 export interface AppUserProfile {
   uid: string;
   skillLevel: number;
+  homeProvince: string | null;
 }

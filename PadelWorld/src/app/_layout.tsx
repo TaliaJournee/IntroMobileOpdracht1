@@ -35,7 +35,6 @@ function AppNavigator() {
     >
       <Stack.Screen name="index" options={{ title: "Home" }} />
       <Stack.Screen name="bookACourt" options={{ title: "Search" }} />
-      <Stack.Screen name="learn" options={{ title: "Classes" }} />
       <Stack.Screen name="compete" options={{ title: "Competitions" }} />
       <Stack.Screen name="findAMatch" options={{ title: "Matches" }} />
       <Stack.Screen name="matchPage/[idString]" options={{ title: "Match" }} />

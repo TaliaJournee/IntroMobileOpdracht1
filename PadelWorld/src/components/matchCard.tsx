@@ -125,13 +125,14 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderRadius: 18,
     marginBottom: 14,
-    marginHorizontal: 16,
+    marginHorizontal: 8,
     shadowColor: "#000",
     shadowOpacity: 0.08,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
     elevation: 3,
     overflow: "hidden",
+    padding: 16
   },
   pressable: {
     padding: 16,

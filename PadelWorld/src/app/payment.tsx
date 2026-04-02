@@ -1,37 +1,20 @@
 import React, { useMemo, useState } from "react";
 import { router, useLocalSearchParams } from "expo-router";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
-import { useAuth } from "@/context/AuthContext";
-import { DEFAULT_SKILL_LEVEL, clampSkillLevel, getUserProfile } from "@/lib/userProfiles";
-import { db } from "../../firebaseConfig";
-import { MATCH_COLLECTION } from "@/lib/matches";
-import { joinMatchAfterPayment } from "@/lib/matchActions";
 import {
-  Timestamp,
-  addDoc,
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  query,
-  serverTimestamp,
-  where,
-} from "firebase/firestore";
-import dayjs from "dayjs";
-import customParseFormat from "dayjs/plugin/customParseFormat";
-
-dayjs.extend(customParseFormat);
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { useAuth } from "@/context/AuthContext";
+import {
+  createMatchWithOptions,
+  joinMatchAfterPayment,
+} from "@/lib/matchActions";
 
 function firstParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
-}
-
-function buildSlotDateTime(dateValue: string, timeValue: string) {
-  return dayjs(
-    `${dateValue.trim()} ${timeValue.trim()}`,
-    "YYYY-MM-DD HH:mm",
-    true,
-  );
 }
 
 const PaymentPage = () => {
@@ -42,6 +25,7 @@ const PaymentPage = () => {
     date?: string | string[];
     time?: string | string[];
     gender?: string | string[];
+    competitive?: string | string[];
     competitiveBand?: string | string[];
   }>();
 
@@ -56,15 +40,16 @@ const PaymentPage = () => {
   const date = firstParam(params.date);
   const time = firstParam(params.time);
   const gender = firstParam(params.gender);
+  const competitiveRaw = firstParam(params.competitive);
   const competitiveBandRaw = firstParam(params.competitiveBand);
 
   const helperText = useMemo(() => {
     if (action === "join") {
-      return "You need to pay before you can join this competitive match.";
+      return "You need to pay before you can join this match.";
     }
 
     if (action === "create") {
-      return "You need to pay before you can create this competitive match.";
+      return "You need to pay before you can create this match.";
     }
 
     return "This payment page was opened without a valid action.";
@@ -102,77 +87,19 @@ const PaymentPage = () => {
           throw new Error("MISSING_CREATE_PARAMS");
         }
 
-        const parsedDateTime = buildSlotDateTime(date, time);
-
-        if (!parsedDateTime.isValid()) {
-          throw new Error("INVALID_DATE_TIME");
-        }
-
-        if (!parsedDateTime.isAfter(dayjs())) {
-          throw new Error("MATCH_PAST");
-        }
-
-        const clubRef = doc(db, "tbl_clubs", clubId);
-        const clubSnap = await getDoc(clubRef);
-
-        if (!clubSnap.exists()) {
-          throw new Error("CLUB_NOT_FOUND");
-        }
-
-        const clubData = clubSnap.data();
-        const club = {
-          id: clubSnap.id,
-          name: clubData.name ?? "",
-          place: clubData.place ?? "",
-          address: clubData.address ?? "",
-          url: clubData.url ?? "",
-          province: clubData.province ?? "",
-        };
-
-        const slotStart = Timestamp.fromDate(parsedDateTime.toDate());
-        const slotEnd = Timestamp.fromDate(parsedDateTime.add(1, "hour").toDate());
-
-        const slotMatchesQuery = query(
-          collection(db, MATCH_COLLECTION),
-          where("clubId", "==", club.id),
-          where("date", ">=", slotStart),
-          where("date", "<", slotEnd),
-        );
-
-        const snapshot = await getDocs(slotMatchesQuery);
-
-        if (!snapshot.empty) {
-          throw new Error("SLOT_TAKEN");
-        }
-
-        const profile = await getUserProfile(user.uid);
-        const playerSkillLevel = profile?.skillLevel ?? DEFAULT_SKILL_LEVEL;
-        const competitiveBand = Number(competitiveBandRaw ?? "0.5");
-
-        const savedLevelMin = clampSkillLevel(playerSkillLevel - competitiveBand);
-        const savedLevelMax = clampSkillLevel(playerSkillLevel + competitiveBand);
-        const matchName = `${club.name} Competitive Match`;
-
-        const docRef = await addDoc(collection(db, MATCH_COLLECTION), {
-          name: matchName,
-          club,
-          clubId: club.id,
-          date: slotStart,
-          genders: gender,
-          level: playerSkillLevel,
-          levelMin: savedLevelMin,
-          levelMax: savedLevelMax,
-          competitive: true,
-          players: [{ uid: user.uid, skillLevel: playerSkillLevel }],
-          playerUids: [user.uid],
-          totalSlots: 4,
-          createdByUid: user.uid,
-          createdAt: serverTimestamp(),
+        const savedMatchId = await createMatchWithOptions({
+          clubId,
+          userUid: user.uid,
+          date,
+          time,
+          gender,
+          competitive: competitiveRaw === "true",
+          competitiveBand: Number(competitiveBandRaw ?? "0.5"),
         });
 
         router.replace({
           pathname: "/matchPage/[idString]",
-          params: { idString: docRef.id },
+          params: { idString: savedMatchId },
         });
         return;
       }

@@ -357,6 +357,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingBottom: 28,
+    alignSelf: "center",
   },
   emptyBox: {
     backgroundColor: "#FFFFFF",
