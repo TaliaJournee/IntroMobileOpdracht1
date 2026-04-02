@@ -41,6 +41,7 @@ function AppNavigator() {
       <Stack.Screen name="matchPage/[idString]" options={{ title: "Match" }} />
       <Stack.Screen name="clubPage/[idString]" options={{ title: "Club" }} />
       <Stack.Screen name="userAccount" options={{ title: "My account" }} />
+      <Stack.Screen name="payment" options={{ title: "Payment" }} />
       <Stack.Screen
         name="sign-in"
         options={{ title: "Sign in", headerShown: false }}

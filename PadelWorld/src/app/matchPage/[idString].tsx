@@ -14,7 +14,7 @@ import {
   normalizePlayers,
   validateCompetitiveSets,
 } from "@/lib/competitive";
-import { useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import {
   ActivityIndicator,
   Pressable,
@@ -29,6 +29,7 @@ import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import { db } from "../../../firebaseConfig";
 import { buildMatchFromDoc, MATCH_COLLECTION } from "@/lib/matches";
+import { joinMatchAfterPayment } from "@/lib/matchActions";
 
 dayjs.extend(customParseFormat);
 
@@ -166,59 +167,20 @@ const MatchPage = () => {
       setJoining(true);
       setError("");
 
-      const profile = await getUserProfile(user.uid);
-      const playerSkillLevel = profile?.skillLevel ?? DEFAULT_SKILL_LEVEL;
-      const matchRef = doc(db, MATCH_COLLECTION, idString);
-
-      await runTransaction(db, async (transaction) => {
-        const matchSnap = await transaction.get(matchRef);
-
-        if (!matchSnap.exists()) {
-          throw new Error("MATCH_NOT_FOUND");
-        }
-
-        const data = matchSnap.data() as Record<string, unknown>;
-        const players = normalizePlayers(data.players);
-        const currentTotalSlots =
-          typeof data.totalSlots === "number" ? data.totalSlots : 4;
-        const hasScore = !!data.score;
-
-        if (players.some((player: MatchPlayer) => player.uid === user.uid)) {
-          throw new Error("ALREADY_JOINED");
-        }
-
-        if (players.length >= currentTotalSlots) {
-          throw new Error("MATCH_FULL");
-        }
-
-        if (hasScore) {
-          throw new Error("MATCH_CLOSED");
-        }
-
-        const rawDate = data.date as { toDate?: () => Date } | undefined;
-        const matchDate = rawDate?.toDate ? dayjs(rawDate.toDate()) : null;
-
-        if (!matchDate || !matchDate.isAfter(dayjs())) {
-          throw new Error("MATCH_PAST");
-        }
-
-        const isCompetitive =
-          typeof data.competitive === "boolean" ? data.competitive : false;
-        const levelMin =
-          typeof data.levelMin === "number" ? data.levelMin : null;
-        const levelMax =
-          typeof data.levelMax === "number" ? data.levelMax : null;
-
-        if (isCompetitive && levelMin !== null && levelMax !== null) {
-          if (playerSkillLevel < levelMin || playerSkillLevel > levelMax) {
-            throw new Error("LEVEL_OUT_OF_RANGE");
-          }
-        }
-
-        transaction.update(matchRef, {
-          players: [...players, { uid: user.uid, skillLevel: playerSkillLevel }],
-          playerUids: [...players.map((player) => player.uid), user.uid],
+      if (match?.competitive) {
+        router.push({
+          pathname: "/payment",
+          params: {
+            action: "join",
+            matchId: idString,
+          },
         });
+        return;
+      }
+
+      await joinMatchAfterPayment({
+        matchId: idString,
+        userUid: user.uid,
       });
 
       await loadMatch();
@@ -243,9 +205,7 @@ const MatchPage = () => {
             setError("You cannot join a match that has already started.");
             break;
           case "LEVEL_OUT_OF_RANGE":
-            setError(
-              `Your level is outside the allowed competitive range (${competitiveRangeText}).`,
-            );
+            setError("Your level is outside the allowed competitive range.");
             break;
           default:
             setError("Something went wrong while joining the match.");

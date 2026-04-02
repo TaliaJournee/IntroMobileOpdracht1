@@ -321,6 +321,21 @@ const ClubPage = () => {
         return;
       }
 
+      if (competitive) {
+        router.push({
+          pathname: "/payment",
+          params: {
+            action: "create",
+            clubId: club.id,
+            date,
+            time,
+            gender,
+            competitiveBand: String(competitiveBand),
+          },
+        });
+        return;
+      }
+
       const profile = await getUserProfile(user.uid);
       const playerSkillLevel = profile?.skillLevel ?? DEFAULT_SKILL_LEVEL;
       const matchName = `${club.name} ${
@@ -740,7 +755,6 @@ const ClubPage = () => {
     </ScrollView>
   );
 };
-
 
 const styles = StyleSheet.create({
   screen: {
