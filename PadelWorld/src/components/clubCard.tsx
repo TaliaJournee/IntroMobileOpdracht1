@@ -1,5 +1,6 @@
 import { Club } from "@/types";
 import { Link } from "expo-router";
+import React from "react";
 import { View, Image, Text, StyleSheet, Pressable } from "react-native";
 
 

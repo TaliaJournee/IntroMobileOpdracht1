@@ -1,12 +1,11 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Match, MatchPlayer, MatchSetScore } from "@/types";
+import React, { useEffect, useMemo, useState } from "react";
+import { ChatMessage, Match, MatchPlayer, MatchSetScore } from "@/types";
 import { useAuth } from "@/context/AuthContext";
 import {
   DEFAULT_SKILL_LEVEL,
   USER_COLLECTION,
   clampSkillLevel,
   formatSkillLevel,
-  getUserProfile,
   parseSkillLevel,
 } from "@/lib/userProfiles";
 import {
@@ -24,12 +23,22 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { Timestamp, doc, getDoc, runTransaction } from "firebase/firestore";
+import {
+  Timestamp,
+  doc,
+  onSnapshot,
+  runTransaction,
+} from "firebase/firestore";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import { db } from "../../../firebaseConfig";
 import { buildMatchFromDoc, MATCH_COLLECTION } from "@/lib/matches";
 import { joinMatchAfterPayment } from "@/lib/matchActions";
+import {
+  MAX_CHAT_MESSAGE_LENGTH,
+  sendMatchChatMessage,
+  subscribeToMatchChat,
+} from "../../lib/matchChat";
 
 dayjs.extend(customParseFormat);
 
@@ -63,6 +72,34 @@ function createEmptyScoreInputs(): ScoreInputRow[] {
   ];
 }
 
+function getChatSenderLabel(
+  message: ChatMessage,
+  currentUserUid: string | undefined,
+  players: MatchPlayer[],
+) {
+  if (currentUserUid && message.senderUid === currentUserUid) {
+    return "You";
+  }
+
+  const playerIndex = players.findIndex(
+    (player) => player.uid === message.senderUid,
+  );
+
+  if (playerIndex >= 0) {
+    return `Player ${playerIndex + 1}`;
+  }
+
+  return "Player";
+}
+
+function formatChatTimestamp(createdAtMillis: number | null) {
+  if (createdAtMillis === null) {
+    return "Sending...";
+  }
+
+  return dayjs(createdAtMillis).format("DD/MM HH:mm");
+}
+
 const MatchPage = () => {
   const { idString } = useLocalSearchParams<{ idString: string }>();
   const { user } = useAuth();
@@ -71,42 +108,48 @@ const MatchPage = () => {
   const [loading, setLoading] = useState(true);
   const [joining, setJoining] = useState(false);
   const [savingScore, setSavingScore] = useState(false);
+  const [sendingMessage, setSendingMessage] = useState(false);
   const [error, setError] = useState("");
+  const [chatError, setChatError] = useState("");
+  const [chatInput, setChatInput] = useState("");
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [scoreInputs, setScoreInputs] = useState<ScoreInputRow[]>(
     createEmptyScoreInputs(),
   );
 
-  const loadMatch = useCallback(async () => {
+  useEffect(() => {
     if (!idString) {
       setError("No match ID was provided.");
       setLoading(false);
       return;
     }
 
-    try {
-      const matchRef = doc(db, MATCH_COLLECTION, idString);
-      const matchSnap = await getDoc(matchRef);
+    setLoading(true);
+    const matchRef = doc(db, MATCH_COLLECTION, idString);
 
-      if (!matchSnap.exists()) {
-        setError("Match not found.");
+    const unsubscribe = onSnapshot(
+      matchRef,
+      (matchSnap) => {
+        if (!matchSnap.exists()) {
+          setMatch(null);
+          setError("Match not found.");
+          setLoading(false);
+          return;
+        }
+
+        const data = matchSnap.data() as Record<string, unknown>;
+        setMatch(buildMatchFromDoc(matchSnap.id, data));
         setLoading(false);
-        return;
-      }
+      },
+      (err) => {
+        console.error("Error loading match:", err);
+        setError("Something went wrong while loading the match.");
+        setLoading(false);
+      },
+    );
 
-      const data = matchSnap.data() as Record<string, unknown>;
-      setMatch(buildMatchFromDoc(matchSnap.id, data));
-      setError("");
-    } catch (err) {
-      console.error("Error loading match:", err);
-      setError("Something went wrong while loading the match.");
-    } finally {
-      setLoading(false);
-    }
+    return unsubscribe;
   }, [idString]);
-
-  useEffect(() => {
-    loadMatch();
-  }, [loadMatch]);
 
   const totalSlots = match?.totalSlots ?? 4;
   const knownPlayers = match?.players ?? [];
@@ -114,6 +157,27 @@ const MatchPage = () => {
   const openSlots = Math.max(totalSlots - takenSlots, 0);
   const isUserInMatch =
     !!user && knownPlayers.some((player) => player.uid === user.uid);
+
+  useEffect(() => {
+    if (!idString || !isUserInMatch) {
+      setChatMessages([]);
+      setChatError("");
+      return;
+    }
+
+    const unsubscribe = subscribeToMatchChat(
+      idString,
+      (messages) => {
+        setChatMessages(messages);
+        setChatError("");
+      },
+      () => {
+        setChatError("Something went wrong while loading the match chat.");
+      },
+    );
+
+    return unsubscribe;
+  }, [idString, isUserInMatch]);
 
   const parsedMatchDate = match?.date
     ? dayjs(match.date, "DD/MM/YYYY HH:mm", true)
@@ -157,6 +221,12 @@ const MatchPage = () => {
     isPastMatch &&
     !scoreAlreadySubmitted;
 
+  const canSendMessage =
+    !!user &&
+    isUserInMatch &&
+    chatInput.trim().length > 0 &&
+    chatInput.trim().length <= MAX_CHAT_MESSAGE_LENGTH;
+
   const handleJoinMatch = async () => {
     if (!user || !idString) {
       setError("You must be signed in to join a match.");
@@ -182,8 +252,6 @@ const MatchPage = () => {
         matchId: idString,
         userUid: user.uid,
       });
-
-      await loadMatch();
     } catch (err) {
       console.error("Error joining match:", err);
 
@@ -326,7 +394,6 @@ const MatchPage = () => {
 
         const levelUpdates = buildWinnerLevelUpdates(players, winnerTeam);
 
-        // Read all user documents first
         const playerDocs: Array<{
           userRef: ReturnType<typeof doc>;
           levelUpdate: (typeof levelUpdates)[number];
@@ -348,7 +415,6 @@ const MatchPage = () => {
           });
         }
 
-        // Only write after all reads are done
         for (const playerDoc of playerDocs) {
           transaction.set(
             playerDoc.userRef,
@@ -373,7 +439,6 @@ const MatchPage = () => {
       });
 
       setScoreInputs(createEmptyScoreInputs());
-      await loadMatch();
     } catch (err) {
       console.error("Error submitting score:", err);
 
@@ -410,6 +475,52 @@ const MatchPage = () => {
     }
   };
 
+  const handleSendMessage = async () => {
+    if (!user || !idString) {
+      setChatError("You must be signed in to send a message.");
+      return;
+    }
+
+    if (!isUserInMatch) {
+      setChatError("Only players in this match can use the chat.");
+      return;
+    }
+
+    try {
+      setSendingMessage(true);
+      setChatError("");
+
+      await sendMatchChatMessage({
+        matchId: idString,
+        senderUid: user.uid,
+        text: chatInput,
+      });
+
+      setChatInput("");
+    } catch (err) {
+      console.error("Error sending message:", err);
+
+      if (err instanceof Error) {
+        switch (err.message) {
+          case "EMPTY_MESSAGE":
+            setChatError("Type a message before sending.");
+            break;
+          case "MESSAGE_TOO_LONG":
+            setChatError(
+              `Messages can be at most ${MAX_CHAT_MESSAGE_LENGTH} characters.`,
+            );
+            break;
+          default:
+            setChatError("Something went wrong while sending the message.");
+        }
+      } else {
+        setChatError("Something went wrong while sending the message.");
+      }
+    } finally {
+      setSendingMessage(false);
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.centered}>
@@ -436,7 +547,10 @@ const MatchPage = () => {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView
+      contentContainerStyle={styles.container}
+      keyboardShouldPersistTaps="handled"
+    >
       <View style={styles.card}>
         <View style={styles.badge}>
           <Text style={styles.badgeText}>{openSlots} spots left</Text>
@@ -535,6 +649,93 @@ const MatchPage = () => {
             );
           })}
         </View>
+
+        {isUserInMatch && (
+          <View style={styles.chatSection}>
+            <View style={styles.chatHeaderRow}>
+              <Text style={styles.sectionTitle}>Match chat</Text>
+              <Text style={styles.chatCounterText}>
+                {chatMessages.length} message{chatMessages.length === 1 ? "" : "s"}
+              </Text>
+            </View>
+
+            <Text style={styles.helperCopy}>
+              Only players in this match can see and send messages here.
+            </Text>
+
+            <View style={styles.chatMessagesBox}>
+              {chatMessages.length === 0 ? (
+                <Text style={styles.emptyChatText}>
+                  No messages yet. Start the conversation.
+                </Text>
+              ) : (
+                chatMessages.map((message) => {
+                  const isOwnMessage = !!user && message.senderUid === user.uid;
+
+                  return (
+                    <View
+                      key={message.id}
+                      style={[
+                        styles.chatMessageBubble,
+                        isOwnMessage
+                          ? styles.chatMessageBubbleOwn
+                          : styles.chatMessageBubbleOther,
+                      ]}
+                    >
+                      <View style={styles.chatMetaRow}>
+                        <Text style={styles.chatSenderText}>
+                          {getChatSenderLabel(message, user?.uid, knownPlayers)}
+                        </Text>
+                        <Text style={styles.chatTimeText}>
+                          {formatChatTimestamp(message.createdAtMillis)}
+                        </Text>
+                      </View>
+                      <Text style={styles.chatMessageText}>{message.text}</Text>
+                    </View>
+                  );
+                })
+              )}
+            </View>
+
+            <View style={styles.chatComposer}>
+              <TextInput
+                value={chatInput}
+                onChangeText={(value) => {
+                  if (value.length <= MAX_CHAT_MESSAGE_LENGTH) {
+                    setChatInput(value);
+                  }
+                }}
+                placeholder="Write a message to the other players"
+                multiline
+                textAlignVertical="top"
+                style={styles.chatInput}
+              />
+
+              <View style={styles.chatComposerFooter}>
+                <Text style={styles.chatLimitText}>
+                  {chatInput.trim().length}/{MAX_CHAT_MESSAGE_LENGTH}
+                </Text>
+
+                <Pressable
+                  onPress={handleSendMessage}
+                  disabled={!canSendMessage || sendingMessage}
+                  style={({ pressed }) => [
+                    styles.chatSendButton,
+                    pressed && styles.primaryButtonPressed,
+                    (!canSendMessage || sendingMessage) &&
+                      styles.chatSendButtonDisabled,
+                  ]}
+                >
+                  <Text style={styles.chatSendButtonText}>
+                    {sendingMessage ? "Sending..." : "Send"}
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+
+            {!!chatError && <Text style={styles.inlineErrorText}>{chatError}</Text>}
+          </View>
+        )}
 
         {match.score && (
           <View style={styles.resultSection}>
@@ -737,6 +938,9 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 20,
   },
+  chatSection: {
+    marginBottom: 20,
+  },
   resultSection: {
     marginBottom: 20,
   },
@@ -790,6 +994,106 @@ const styles = StyleSheet.create({
   },
   playerStatusTextOpen: {
     color: "#166534",
+  },
+  chatHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 8,
+  },
+  chatCounterText: {
+    fontSize: 12,
+    color: "#6B7280",
+    fontWeight: "600",
+  },
+  chatMessagesBox: {
+    backgroundColor: "#F8FAFC",
+    borderRadius: 16,
+    padding: 12,
+    gap: 10,
+    marginBottom: 12,
+  },
+  emptyChatText: {
+    color: "#6B7280",
+    fontSize: 14,
+  },
+  chatMessageBubble: {
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  chatMessageBubbleOwn: {
+    backgroundColor: "#DBEAFE",
+  },
+  chatMessageBubbleOther: {
+    backgroundColor: "#E5E7EB",
+  },
+  chatMetaRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 6,
+  },
+  chatSenderText: {
+    color: "#1F2A44",
+    fontWeight: "700",
+    fontSize: 13,
+  },
+  chatTimeText: {
+    color: "#6B7280",
+    fontSize: 12,
+    fontWeight: "500",
+  },
+  chatMessageText: {
+    color: "#111827",
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  chatComposer: {
+    backgroundColor: "#F8FAFC",
+    borderRadius: 16,
+    padding: 12,
+  },
+  chatInput: {
+    minHeight: 90,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: "#111827",
+  },
+  chatComposerFooter: {
+    marginTop: 10,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 12,
+  },
+  chatLimitText: {
+    color: "#6B7280",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  chatSendButton: {
+    backgroundColor: "#111827",
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  chatSendButtonDisabled: {
+    backgroundColor: "#9CA3AF",
+  },
+  chatSendButtonText: {
+    color: "#FFFFFF",
+    fontWeight: "700",
+    fontSize: 14,
   },
   resultRow: {
     flexDirection: "row",
@@ -891,7 +1195,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#DC2626",
     fontWeight: "600",
-    marginBottom: 12,
+    marginTop: 12,
   },
 });
 

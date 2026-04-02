@@ -24,6 +24,13 @@ export interface CompetitiveScore {
   levelsApplied?: boolean;
 }
 
+export interface ChatMessage {
+  id: string;
+  senderUid: string;
+  text: string;
+  createdAtMillis: number | null;
+}
+
 export interface Match {
   id: string;
   club: Club | null;

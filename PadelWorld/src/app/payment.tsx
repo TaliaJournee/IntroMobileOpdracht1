@@ -86,7 +86,7 @@ const PaymentPage = () => {
         }
 
         await joinMatchAfterPayment({
-          matchId,
+          matchId: matchId,
           userUid: user.uid,
         });
 
